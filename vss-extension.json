@@ -1,0 +1,70 @@
+{
+    "manifestVersion": 1,
+    "id": "build-times-dashboard-widgets",
+    "version": "0.0.7",
+    "name": "Build Times Widget",
+    "description": "A widget to monitor and set a target for build times.",
+    "publisher": "aristotle",
+    "categories": ["Azure Boards"],
+    "targets": [
+        {
+            "id": "Microsoft.VisualStudio.Services"
+        }
+    ],
+    "icons": {
+        "default": "img/logo.png"
+    },
+    "contributions": [
+        {
+            "id": "BuildTimesWidget",
+            "type": "ms.vss-dashboards-web.widget",
+            "targets": [
+                "ms.vss-dashboards-web.widget-catalog",
+                "aristotle.build-times-dashboard-widgets.BuildTimesWidget.Configuration"
+            ],
+            "properties": {
+                "name": "Build Times Widget",
+                "description": "A widget to monitor and set a target for build times.",
+                "catalogIconUrl": "img/CatalogIcon.png",
+                "previewImageUrl": "img/preview.png",                            
+                "uri": "build-times.html",
+                "isNameConfigurable": true,
+                "supportedSizes": [
+                     {
+                            "rowSpan": 1,
+                            "columnSpan": 2
+                        }
+                    ],
+                "supportedScopes": ["project_team"]
+            }
+        },
+        {
+            "id": "BuildTimesWidget.Configuration",
+            "type": "ms.vss-dashboards-web.widget-configuration",
+            "targets": [ "ms.vss-dashboards-web.widget-configuration" ],
+            "properties": {
+                "name": "Build Times Widget Configuration",
+                "description": "Configures BuildTimesWidget",
+                "uri": "configuration.html"
+            }
+        }
+    ],
+    "files": [
+        {
+            "path": "build-times.html", "addressable": true
+        },
+        {
+            "path": "configuration.html", "addressable": true
+        },
+        {
+            "path": "node_modules/vss-web-extension-sdk/lib/VSS.SDK.min.js",
+            "addressable": true
+        },
+        {
+            "path": "img", "addressable": true
+        }
+    ],
+    "scopes":[
+        "vso.build"
+    ]
+}

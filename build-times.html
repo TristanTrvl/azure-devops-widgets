@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+    <head>          
+        <script src="node_modules/vss-web-extension-sdk/lib/VSS.SDK.min.js"></script>
+        <script type="text/javascript">
+            VSS.init({                        
+                explicitNotifyLoaded: true,
+                usePlatformStyles: true
+            });
+    
+            VSS.require(["TFS/Dashboards/WidgetHelpers", "TFS/Build/RestClient"], 
+            function (WidgetHelpers, TFS_Build_WebApi) {
+                WidgetHelpers.IncludeWidgetStyles();
+
+                VSS.register("BuildTimesWidget", function () {
+                    var projectId = VSS.getWebContext().project.id;
+                    var getBuildBuildInfo = function (widgetSettings) {
+                        var settings = JSON.parse(widgetSettings.customSettings.data);
+                        if (!settings || !settings.buildDefinition) {                      
+                            // Initialize display values
+                            $("#no-build-selected-label").show();
+                            $("#build-times-graph").hide();
+                            
+                            return WidgetHelpers.WidgetStatusHelper.Success()
+                        }
+                     
+                        if (parseInt(settings.buildDefinition) > 0) {
+                            // Get most recent successful build details
+                            // .getBuilds(project, definitions, queues, buildNumber, minFinishTime, maxFinishTime, requestedFor, reasonFilter, statusFilter, resultFilter, tagFilters, properties, type, top, continuationToken, maxBuildsPerDefinition, deletedFilter, queryOrder, branchName)
+                            TFS_Build_WebApi.getClient().getBuilds(projectId, [parseInt(settings.buildDefinition)], null, null, null, null, null, null, "Completed", "Failed,PartiallySucceeded,Succeeded", null, null, null, 1, null, null, null, null, null)
+                                .then(function (builds) {
+                                    console.debug(builds);
+                                    for (var i=0; i<builds.length; i++) {
+                                        var build = builds[i];
+                                        console.debug(build);
+
+                                        var row = $('<tr />');
+                                        row.append($('<td></td>').text(Date.parse(build.finishTime)));
+                                        row.append($('<td></td>').text(build.id));
+                                        var durationMinutes = (Date.parse(build.finishTime) - Date.parse(build.startTime)) / 60000;
+                                        row.append($('<td></td>').text(durationMinutes));
+                                        $("#build-times-graph").children('tbody').append(row);
+                                    }
+                                });
+                        }
+
+                        // Get a client to make REST calls
+                        return TFS_Build_WebApi.getClient().getDefinition(settings.buildDefinition, projectId)
+                            .then(function (query) {                              
+                                // Use the widget helper and return success as Widget Status
+                                return WidgetHelpers.WidgetStatusHelper.Success();
+                            }, function (error) {
+                                // Use the widget helper and return failure as Widget Status
+                                return WidgetHelpers.WidgetStatusHelper.Failure(error.message);
+                            });
+                    }
+
+                    return {
+                        load: function (widgetSettings) {
+                            // Set title
+                            $("h2.title").text(widgetSettings.name);
+
+                            // Output diagnostics info to console
+                            console.log('event: load called');
+
+                            return getBuildBuildInfo(widgetSettings);
+                        },
+                        reload: function (widgetSettings) {
+                            // Set title
+                            $("h2.title").text(widgetSettings.name);
+                            
+                            // Output diagnostics info to console
+                            console.log('event: reload called');
+
+                            return getBuildBuildInfo(widgetSettings);
+                        }
+                    }
+                });
+                VSS.notifyLoadSucceeded();
+            });
+        </script>
+    </head>
+    <body>
+        <div class="widget">
+            <h2 class="title">Build times</h2>
+            <label id="no-build-selected-label" hidden>No build definition selected</label>
+            <table id="build-times-graph">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Id</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                </tbody>
+            </table>
+        </div>
+    </body>
+</html>

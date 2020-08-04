@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+    <head>
+        <script src="node_modules/vss-web-extension-sdk/lib/VSS.SDK.min.js"></script>
+        <script type="text/javascript">
+            // Initialize
+            VSS.init({
+                explicitNotifyLoaded: true,
+                usePlatformStyles: true,
+                usePlatformScripts: true
+            });
+
+            VSS.require(["TFS/Dashboards/WidgetHelpers", "TFS/Build/RestClient"], 
+            function (WidgetHelpers, TFS_Build_WebApi) {
+                // TODO: The following line may need VSS.ready() instead. Need to test.
+                VSS.register("BuildTimesWidget.Configuration", function () {
+                    WidgetHelpers.IncludeWidgetConfigurationStyles();
+
+                    var projectId = VSS.getWebContext().project.id;
+                    var $buildDefinitionDropdown = $("#build-definition-dropdown");
+
+                    return {
+                        load: function (widgetSettings, widgetConfigurationContext) {
+                            // Retrieve configurations settings
+                            var settings = JSON.parse(widgetSettings.customSettings.data);
+                        
+                            TFS_Build_WebApi.getClient().getDefinitions(projectId).then(function (query) {
+                                
+                                // Populate dropdown with list of build definitions     
+                                $.each(query, function(key, value) {
+                                    $buildDefinitionDropdown.append($("<option />").val(value.id).text(value.name));
+                                });
+
+                                // Sort dropdown list of build definitions alphabetically                     
+                                $('#build-definition-dropdown').html($('#build-definition-dropdown' + ' option').sort(function(a, b) {
+                                    return a.text == b.text ? 0 : a.text < b.text ? -1 : 1
+                                }));
+                                
+                                // If a build definition has been previously selected, set the dropdown value
+                                if (settings && settings.buildDefinition) {
+                                    $buildDefinitionDropdown.val(settings.buildDefinition).trigger("chosen:updated");
+                                }
+                                else {
+                                    // Set the Please select... item as the default
+                                    $('#build-definition-dropdown').prepend($('<option />').val('').text('Please select a build definition:'));
+                                    $('#build-definition-dropdown').val('');
+                                    $("#build-definition-dropdown option[value='']").attr("disabled", true);
+                                }
+
+                                // Use the widget helper and return success as Widget Status
+                                return WidgetHelpers.WidgetStatusHelper.Success();
+                            }, function (error) {
+                                // Use the widget helper and return failure as Widget Status
+                                return WidgetHelpers.WidgetStatusHelper.Failure(error.message);
+                            });
+                            
+                            // If a build definition change has been made, prepare to persist the new values
+                            $buildDefinitionDropdown.on("change", function () {
+                                // Output diagnostics info to console
+                                console.log('event: buildDefinitionDropdown.change');
+
+                                var customSettings = {
+                                    data: JSON.stringify({
+                                        buildDefinition: $buildDefinitionDropdown.val(),
+                                    })
+                                };
+                                var eventName = WidgetHelpers.WidgetEvent.ConfigurationChange;
+                                var eventArgs = WidgetHelpers.WidgetEvent.Args(customSettings);
+                                widgetConfigurationContext.notify(eventName, eventArgs);
+                            });
+
+                            return WidgetHelpers.WidgetStatusHelper.Success();
+                        },
+                        onSave: function() {
+                            // Output diagnostics info to console
+                            console.log('event: onSave');
+
+                            // Persist the selected definition
+                            var customSettings = {
+                                data: JSON.stringify({
+                                    buildDefinition: $buildDefinitionDropdown.val()
+                                })
+                            };
+                            return WidgetHelpers.WidgetConfigurationSave.Valid(customSettings);
+                        }
+                    }
+                });
+                VSS.notifyLoadSucceeded();
+            });
+        </script>
+    </head>
+    <body>
+        <div class="widget-configuration">
+            <div class="dropdown">
+                <label>Build definition</label>
+                <div class="wrapper">
+                    <select id="build-definition-dropdown">                        
+                    </select>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
