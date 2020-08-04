@@ -1,10 +1,10 @@
 {
     "manifestVersion": 1,
     "id": "build-times-dashboard-widgets",
-    "version": "0.0.7",
+    "version": "0.0.31",
     "name": "Build Times Widget",
     "description": "A widget to monitor and set a target for build times.",
-    "publisher": "aristotle",
+    "publisher": "aristotelos",
     "categories": ["Azure Boards"],
     "targets": [
         {
@@ -20,7 +20,7 @@
             "type": "ms.vss-dashboards-web.widget",
             "targets": [
                 "ms.vss-dashboards-web.widget-catalog",
-                "aristotle.build-times-dashboard-widgets.BuildTimesWidget.Configuration"
+                "aristotelos.build-times-dashboard-widgets.BuildTimesWidget.Configuration"
             ],
             "properties": {
                 "name": "Build Times Widget",
