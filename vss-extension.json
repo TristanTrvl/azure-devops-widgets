@@ -1,7 +1,7 @@
 {
     "manifestVersion": 1,
     "id": "build-times-dashboard-widgets",
-    "version": "0.0.31",
+    "version": "0.1.0",
     "name": "Build Times Widget",
     "description": "A widget to monitor and set a target for build times.",
     "publisher": "aristotelos",

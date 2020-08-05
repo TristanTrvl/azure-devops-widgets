@@ -8,7 +8,7 @@
                 usePlatformStyles: true
             });
     
-            VSS.require(["TFS/Dashboards/WidgetHelpers", "TFS/Build/RestClient", "Charts/Services"], 
+            VSS.require(["TFS/Dashboards/WidgetHelpers", "TFS/Build/RestClient"], 
             function (WidgetHelpers, TFS_Build_WebApi, TFS_Charts) {
                 WidgetHelpers.IncludeWidgetStyles();
 
@@ -19,7 +19,7 @@
                         if (!settings || !settings.buildDefinition) {                      
                             // Initialize display values
                             $("#no-build-selected-label").show();
-                            $("#build-times-graph").hide();
+                            $("#build-times-average").hide();
                             
                             return WidgetHelpers.WidgetStatusHelper.Success();
                         }
@@ -27,68 +27,35 @@
                         if (parseInt(settings.buildDefinition) > 0) {
                             // Get most recent successful build details
                             // .getBuilds(project, definitions, queues, buildNumber, minFinishTime, maxFinishTime, requestedFor, reasonFilter, statusFilter, resultFilter, tagFilters, properties, type, top, continuationToken, maxBuildsPerDefinition, deletedFilter, queryOrder, branchName)
-                            TFS_Build_WebApi.getClient().getBuilds(projectId, [parseInt(settings.buildDefinition)], null, null, null, null, null, null, "Completed", "Failed,PartiallySucceeded,Succeeded", null, null, null, 30, null, null, null, null, null)
+                            TFS_Build_WebApi.getClient().getBuilds(projectId, [parseInt(settings.buildDefinition)], null, null, null, null, null, null, "Completed", "PartiallySucceeded,Succeeded", null, null, null, 30, null, null, null, null, null)
                                 .then(function (builds) {
-                                    return TFS_Charts.ChartsService.getService().then(
-                                        function (chartService) {
-                                            console.debug(builds);
+                                    console.debug(builds);
 
-                                            var chartData = [];
-                                            for (var i=0; i<builds.length; i++) {
-                                                var build = builds[i];
+                                    if (builds.length == 0) {
+                                        $("#no-build-results").show();
+                                        $("#build-times-average").hide();
+                                    } else {
+                                        var sumBuildTimeSeconds = builds
+                                            .map(build => build.finishTime - build.startTime)
+                                            .reduce((sum, buildTime) => sum + buildTime, 0) / 1000;
+                                        var averageBuildTimeSeconds = sumBuildTimeSeconds
+                                            / builds.length;
 
-                                                var buildDurationMinutes = (Date.parse(build.finishTime) - Date.parse(build.startTime)) / 60000;
-                                                var buildColor = "orange";
-                                                switch (build.result)
-                                                {
-                                                    case 2: //"succeeded"
-                                                        buildColor = "green";
-                                                        break;
-                                                }
-                                                chartData.push({
-                                                    name: build.buildNumber,
-                                                    color: buildColor,
-                                                    x: build.finishTime,
-                                                    y: buildDurationMinutes
-                                                });                                           
-                                            }
-                                            console.debug(chartData);
+                                        console.debug(averageBuildTimeSeconds);
 
-                                            var chartOptions = {
-                                                chartType: 'column',
-                                                hostOptions: {
-                                                    height: 120,
-                                                    width: 302
-                                                },
-                                                legend: {
-                                                    enabled: false
-                                                },
-                                                xAxis: {
-                                                    visible: false,
-                                                    labels: {
-                                                        enabled: false
-                                                    }
-                                                },
-                                                yAxis: {
-                                                    title: ''
-                                                },
-                                                series:[{
-                                                    name: "Builds",
-                                                    data: chartData
-                                                }]
-                                            };
-                                            chartService.createChart($('#build-times-graph'), chartOptions);
-
-                                            return WidgetHelpers.WidgetStatusHelper.Success();
-                                        },
-                                        function (error) {
-                                            return WidgetHelpers.WidgetStatusHelper.Failure(error.message);
-                                        });
-                                    },
-                                    function (error) {
-                                        return WidgetHelpers.WidgetStatusHelper.Failure(error.message);
+                                        if (averageBuildTimeSeconds < 60) {
+                                            $('#build-times-average').text(Math.round(averageBuildTimeSeconds) + 's');
+                                        } else {
+                                            $('#build-times-average').text((averageBuildTimeSeconds / 60).toFixed(1) + 'm');
+                                        }
                                     }
-                                );
+                                    
+                                    return WidgetHelpers.WidgetStatusHelper.Success();
+                                },
+                                function (error) {
+                                    return WidgetHelpers.WidgetStatusHelper.Failure(error.message);
+                                }
+                            );
                         }
 
                         // Get a client to make REST calls
@@ -131,7 +98,8 @@
         <div class="widget">
             <h2 class="title">Build times</h2>
             <label id="no-build-selected-label" hidden>No build definition selected</label>
-            <div id="build-times-graph"></div>
+            <label id="no-build-results" hidden>No successful build results</label>
+            <div id="build-times-average" class="big-count" title="Average of last 30 succeeding or partially succeeding builds"></div>
         </div>
     </body>
 </html>
